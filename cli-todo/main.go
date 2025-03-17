@@ -25,6 +25,20 @@ func main() {
 
 	todos := Todos{NextId: 1, Todos: make(map[int]*Todo)}
 
+	fmt.Printf("Welcome to the todo app! \n\n")
+	fmt.Printf("Type 'help' for a list of commands.\n\n")
+	fmt.Printf("Do you want to load previous todos? (y/n): ")
+
+	load, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if strings.TrimSpace(load) == "y" {
+		todos.load()
+	}
+
 	for {
 		fmt.Println()
 		fmt.Println("what would you like to do? (list, toggle, add, clear, exit, help, save)")

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -9,59 +10,24 @@ import (
 )
 
 type Todo struct {
-	id   int
-	text string
-	done bool
+	Id   int    `json:"id"`
+	Text string `json:"text"`
+	Done bool   `json:"done"`
 }
 
 type Todos struct {
-	todos  map[int]*Todo
-	nextId int
-}
-
-func (t *Todos) add(text string) {
-	t.todos[t.nextId] = &Todo{id: t.nextId, text: text, done: false}
-	t.nextId++
-}
-
-func (t *Todos) list() {
-	if len(t.todos) == 0 {
-		fmt.Println("no todos")
-		return
-	}
-
-	fmt.Println("\ntodos:")
-	for _, todo := range t.todos {
-		status := "[ ]"
-		if todo.done {
-			status = "[x]"
-		}
-		fmt.Printf("%s %d %s\n", status, todo.id, todo.text)
-	}
-}
-
-func (t *Todos) toggle(id int) {
-	todo, ok := t.todos[id]
-	if !ok {
-		fmt.Printf("no todo with id %d\n", id)
-		return
-	}
-	t.todos[id].done = !todo.done
-}
-
-func (t *Todos) clear() {
-	t.todos = make(map[int]*Todo)
+	Todos  map[int]*Todo `json:"todos"`
+	NextId int           `json:"nextId"`
 }
 
 func main() {
-
 	reader := bufio.NewReader(os.Stdin)
 
-	todos := Todos{nextId: 1, todos: make(map[int]*Todo)}
+	todos := Todos{NextId: 1, Todos: make(map[int]*Todo)}
 
 	for {
 		fmt.Println()
-		fmt.Println("what would you like to do? (list, toggle, add, clear, exit, help)")
+		fmt.Println("what would you like to do? (list, toggle, add, clear, exit, help, save)")
 		fmt.Printf("> ")
 		cmd, err := reader.ReadString('\n')
 
@@ -101,12 +67,19 @@ func main() {
 			}
 			todos.add(strings.TrimSpace(text))
 
+		case "save":
+			todos.save()
+
+		case "load":
+			todos.load()
+
 		case "help":
 			fmt.Println("add - add a todo")
 			fmt.Println("list - list all todos")
 			fmt.Println("toggle - toggle a todo")
 			fmt.Println("clear - clear all todos")
 			fmt.Println("exit - exit the app")
+			fmt.Println("save - save all todos to a file")
 
 		case "clear":
 			todos.clear()
@@ -120,4 +93,69 @@ func main() {
 			fmt.Println("unknown command")
 		}
 	}
+}
+
+func (t *Todos) add(text string) {
+	t.Todos[t.NextId] = &Todo{Id: t.NextId, Text: text, Done: false}
+	t.NextId++
+}
+
+func (t *Todos) list() {
+	if len(t.Todos) == 0 {
+		fmt.Println("no todos")
+		return
+	}
+
+	fmt.Println("\ntodos:")
+	for _, todo := range t.Todos {
+		status := "[ ]"
+		if todo.Done {
+			status = "[x]"
+		}
+		fmt.Printf("%s %d %s\n", status, todo.Id, todo.Text)
+	}
+}
+
+func (t *Todos) toggle(id int) {
+	todo, ok := t.Todos[id]
+	if !ok {
+		fmt.Printf("no todo with id %d\n", id)
+		return
+	}
+	t.Todos[id].Done = !todo.Done
+}
+
+func (t *Todos) clear() {
+	t.Todos = make(map[int]*Todo)
+}
+
+func (t *Todos) save() {
+	out, err := json.MarshalIndent(t, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = os.WriteFile("todos.json", out, os.ModePerm)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("todos saved")
+}
+
+func (t *Todos) load() {
+	in, err := os.ReadFile("todos.json")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	t.clear()
+
+	err = json.Unmarshal(in, t)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("todos loaded")
 }
